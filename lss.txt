@@ -1,0 +1,93 @@
+#include <Keypad.h>
+#include <Servo.h>
+
+const int buzzerPin = A0;   // Buzzer connected to A0
+const int laserPin = A5;    // Laser connected to A5
+const int receiverPin = 11; // Receiver connected to pin 11
+Servo myServo;  // Servo motor
+
+const byte ROWS = 4;  // Four rows
+const byte COLS = 4;  // Four columns
+
+// Define the symbols on the buttons of the keypads
+char hexaKeys[ROWS][COLS] = {
+  {'D', 'C', 'B', 'A'},
+  {'#', '9', '6', '3'},
+  {'0', '8', '5', '2'},
+  {'*', '7', '4', '1'}
+};
+
+byte rowPins[ROWS] = {2, 3, 4, 5};
+byte colPins[COLS] = {6, 7, 8, 9};
+
+Keypad customKeypad = Keypad(makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS);
+
+const String correctPIN = "1234";  // Set your desired 4-digit PIN here
+String inputPIN = "";  // To store the entered PIN
+bool buzzerActive = false; // Track if the buzzer is currently active
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(buzzerPin, OUTPUT);
+  pinMode(laserPin, OUTPUT);
+  pinMode(receiverPin, INPUT);
+
+  digitalWrite(laserPin, HIGH); // Turn on the laser
+
+  myServo.attach(A1);  // Attach the servo to pin 12
+  myServo.write(90);   // Start with the servo at 90 degrees
+}
+
+void loop() {
+  char customKey = customKeypad.getKey();
+
+  if (customKey) {
+    Serial.print("Key Pressed: ");
+    Serial.println(customKey);
+
+    if (customKey == '#') {
+      // Check if the entered PIN is correct when # is pressed
+      if (inputPIN == correctPIN) {
+        Serial.println("PIN Correct!");
+        buzzerActive = false; // Turn off buzzer
+        noTone(buzzerPin);
+        myServo.write(0);  // Move servo to 0 degrees
+        delay(3000);       // Wait for 3 seconds
+        myServo.write(90); // Move servo back to 90 degrees
+      } else {
+        Serial.println("Incorrect PIN");
+        if (!buzzerActive) {
+          tone(buzzerPin, 100, 50000); // Buzz to indicate incorrect PIN (fixed frequency and duration)
+          buzzerActive = true; // Set buzzer active
+        }
+      }
+      inputPIN = "";  // Clear the input after checking
+    } else if (customKey == '*') {
+      inputPIN = "";  // Clear the input if * is pressed
+      Serial.println("Input Cleared");
+      buzzerActive = false; // Turn off buzzer
+      noTone(buzzerPin); // Ensure buzzer is turned off
+    } else {
+      inputPIN += customKey;  // Append the pressed key to the inputPIN
+      Serial.print("Current PIN: ");
+      Serial.println(inputPIN);
+    }
+  }
+
+  // Laser and Receiver functionality
+  
+  int receiverValue = digitalRead(receiverPin);
+
+  // Print the receiver value to the Serial Monitor
+  Serial.print("Receiver Value: ");
+  Serial.println(receiverValue);
+
+  if (receiverValue == HIGH) {
+    digitalWrite(buzzerPin, LOW);  // Turn off the buzzer if the laser is detected
+  } else {
+    digitalWrite(buzzerPin, HIGH); // Turn on the buzzer if the laser is not detected
+  }
+
+  delay(100); // Small delay for stability
+}
+S
